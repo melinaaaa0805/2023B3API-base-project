@@ -6,10 +6,13 @@ import User from './entities/user.entity';
 import { JwtModule } from '@nestjs/jwt';
 import { jwtConstants } from '../auth/auth.constant';
 import { PassportModule } from '@nestjs/passport';
+import { JwtStrategy } from '../auth/jwt.strategie';
+import { ProjectUser } from '../project-user/entities/project-user.entity';
+import Project from '../projects/entities/project.entity';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([User]),
+    TypeOrmModule.forFeature([User, Project, ProjectUser]),
     JwtModule.register({
       secret: jwtConstants.secret,
       signOptions: { expiresIn: '1h' },
@@ -17,6 +20,7 @@ import { PassportModule } from '@nestjs/passport';
     PassportModule.register({ defaultStrategy: 'jwt' }),
   ],
   controllers: [UsersController],
-  providers: [UsersService],
+  providers: [UsersService, JwtStrategy],
+  exports: [JwtModule, PassportModule],
 })
 export class UsersModule {}
