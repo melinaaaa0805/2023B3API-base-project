@@ -19,10 +19,10 @@ export class ProjectUser {
   @Column({ type: 'date' })
   endDate: Date;
 
-  @Column('uuid')
+  @Column()
   projectId: string;
 
-  @Column('uuid')
+  @Column()
   userId: string;
 
   @ManyToOne(() => User, (user) => user.id)

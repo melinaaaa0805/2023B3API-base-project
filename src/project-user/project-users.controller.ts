@@ -21,27 +21,40 @@ import { ProjectUser } from './entities/project-user.entity';
 @Controller('project-users')
 export class ProjectUsersController {
   constructor(private readonly projectUserService: ProjectsUsersService) {}
-
   @Post()
   @UseGuards(AuthGuard)
   @HttpCode(HttpStatus.CREATED)
   @UsePipes(new ValidationPipe())
   async create(@Body() createProjectUserDto: CreateProjectUserDto, @Req() req) {
-    console.log('LEE roLE' + req.user.role);
-    if (req.user.role == 'Admin' || req.user.role == 'ProjectManager') {
-      const projects =
-        await this.projectUserService.findByEmployee(createProjectUserDto);
-      if (projects == null) {
-        const projectUser =
-          await this.projectUserService.create(createProjectUserDto);
-        return projectUser;
-      } else {
+    try {
+      // Vérifier les autorisations de l'utilisateur
+      if (req.user.role !== 'Admin' && req.user.role !== 'ProjectManager') {
+        throw new UnauthorizedException('Accès non autorisé');
+      }
+
+      // Vérifier si l'utilisateur est déjà affecté à un projet pour la période demandée
+      const existingProjectUser =
+        await this.projectUserService.checkIfUserIsAssigned(
+          createProjectUserDto.userId,
+          createProjectUserDto.startDate,
+          createProjectUserDto.endDate,
+        );
+
+      if (existingProjectUser) {
         throw new ConflictException(
           "L'utilisateur est déjà assigné à un projet sur les mêmes dates.",
         );
       }
-    } else {
-      throw new UnauthorizedException('Accès non autorisé');
+
+      // Créer le ProjectUser si l'utilisateur n'est pas déjà affecté à un projet sur les mêmes dates
+      const projectUser =
+        await this.projectUserService.create(createProjectUserDto);
+
+      // Renvoyer le projetUser avec les relations user, project et referringEmployee incluses
+      return this.projectUserService.getProjectUserDetails(projectUser.id);
+    } catch (error) {
+      // Gérer les autres erreurs éventuelles ici
+      throw new ConflictException('Erreur lors de la création du ProjectUser');
     }
   }
   @Get()

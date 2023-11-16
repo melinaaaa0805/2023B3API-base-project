@@ -19,7 +19,7 @@ export class Project {
   @Column()
   name: string;
 
-  @Column('uuid')
+  @Column()
   referringEmployeeId: string;
 
   @ManyToOne(() => User, (user) => user.id)

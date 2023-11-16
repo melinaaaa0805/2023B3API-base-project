@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { Repository } from 'typeorm';
+import { FindManyOptions, Repository } from 'typeorm';
 import { CreateProjectDto } from './dto/create-project.dto';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Project } from './entities/project.entity';
@@ -26,9 +26,24 @@ export class ProjectsService {
     return { project };
   }
 
-  async findAll(): Promise<Project[]> {
-    const projects = await this.projectsRepository.find();
-    return projects;
+  async findAll() {
+    const options: FindManyOptions<Project> = {
+      relations: ['referringEmployee'],
+    };
+    const projects = await this.projectsRepository.find(options);
+
+    const sanitizedProjects = projects.map((project) => ({
+      id: project.id,
+      name: project.name,
+      referringEmployeeId: project.referringEmployeeId,
+      referringEmployee: {
+        id: project.referringEmployee.id,
+        username: project.referringEmployee.username,
+        email: project.referringEmployee.email,
+        role: project.referringEmployee.role,
+      },
+    }));
+    return sanitizedProjects;
   }
 
   async findByEmployee(id: string) {
@@ -48,6 +63,15 @@ export class ProjectsService {
       where: { referringEmployeeId: id },
     });
     return { project };
+  }
+  async getProjectsForUser(id: string) {
+    const projects = await this.projectsRepository
+      .createQueryBuilder('project')
+      .innerJoin('project.projectUsers', 'projectId')
+      .innerJoin('projectUser.user', 'referringEmployeeId')
+      .where('user.id = :userId', { id })
+      .getMany();
+    return projects;
   }
 }
 
