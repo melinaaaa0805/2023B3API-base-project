@@ -7,8 +7,6 @@ import {
   Req,
   UseGuards,
   UnauthorizedException,
-  HttpCode,
-  HttpStatus,
   Get,
   Param,
   ForbiddenException,
@@ -27,35 +25,36 @@ export class ProjectsController {
     private readonly userService: UsersService,
     private readonly projectUserService: ProjectsUsersService,
   ) {}
+  // fonction testée
 
   @Post()
   @UseGuards(AuthGuard)
-  @HttpCode(HttpStatus.CREATED)
   @UsePipes(new ValidationPipe())
   async create(@Body() createProjectDto: CreateProjectDto, @Req() req) {
-    if (req.user.role == 'Admin') {
-      const user = await this.userService.returnUser(
-        createProjectDto.referringEmployeeId,
-      );
-      if (user.role == 'Admin' || user.role == 'ProjectManager') {
-        const project = await this.projectService.create(createProjectDto);
-        if (project) {
-          const projectGet = await this.projectService.getProject(
-            createProjectDto.name,
-          );
-          if (projectGet !== null) {
-            return {
-              id: projectGet.project.id,
-              name: createProjectDto.name,
-              referringEmployeeId: createProjectDto.referringEmployeeId,
-              referringEmployee: {
-                id: user.id,
-                username: user.username,
-                email: user.email,
-                role: user.role,
-              },
-            };
-          }
+    if (req.user.role !== 'Admin') {
+      throw new UnauthorizedException();
+    }
+    const user = await this.userService.returnUser(
+      createProjectDto.referringEmployeeId,
+    );
+    if (user.role == 'Admin' || user.role == 'ProjectManager') {
+      const project = await this.projectService.create(createProjectDto);
+      if (project) {
+        const projectGet = await this.projectService.getProject(
+          createProjectDto.name,
+        );
+        if (projectGet !== null) {
+          return {
+            id: projectGet.project.id,
+            name: createProjectDto.name,
+            referringEmployeeId: createProjectDto.referringEmployeeId,
+            referringEmployee: {
+              id: user.id,
+              username: user.username,
+              email: user.email,
+              role: user.role,
+            },
+          };
         }
       } else {
         throw new UnauthorizedException();
@@ -69,21 +68,12 @@ export class ProjectsController {
   @Get()
   async getProjects(@Req() req) {
     try {
-      // Vérifier le rôle de l'utilisateur et filtrer les projets en conséquence
       if (req.user.role === 'Admin' || req.user.role === 'ProjectManager') {
-        // Administrateurs ou chefs de projet peuvent voir tous les projets
         return await this.projectService.findAll();
       } else if (req.user.role === 'Employee') {
-        // Employé : filtrer les projets dans lesquels l'employé est impliqué
-        const employeeProjects = await this.projectService.getProjectsForUser(
-          req.user.role,
-        );
-
-        console.log(
-          'le projet est ou cette fjjd resposee' +
-            JSON.stringify(employeeProjects),
-        );
-        return { employeeProjects };
+        const employeeProjects =
+          await this.projectUserService.getProjectsForUser(req.user.sub);
+        return employeeProjects;
       } else {
         throw new ForbiddenException('Access Forbidden');
       }
@@ -94,39 +84,24 @@ export class ProjectsController {
   @UseGuards(AuthGuard)
   @Get(':id')
   async getOneProject(@Param('id') projectId: string, @Req() req) {
-    try {
-      const oneProject = await this.projectService.findById(projectId);
-      // Vérifier si l'utilisateur a le droit de consulter le projet
-      if (oneProject == undefined) {
-        throw new NotFoundException('Resource not found');
-      }
-      if (
-        req.user.role === 'Admin' ||
-        req.user.role === 'ProjectManager' ||
-        (req.user.role === 'Employee' &&
-          (await this.projectUserService.isUserInvolvedInProject(
-            req.user.id,
-            oneProject.id,
-          )))
-      ) {
+    const oneProject = await this.projectService.findById(projectId);
+    if (oneProject == undefined) {
+      throw new NotFoundException('Resource not found');
+    }
+
+    if (req.user.role === 'Admin' || req.user.role === 'ProjectManager') {
+      return oneProject;
+    }
+    if (req.user.role === 'Employee') {
+      const result = await this.projectUserService.isUserInvolvedInProject(
+        req.user.sub,
+        projectId,
+      );
+      if (result === true) {
         return oneProject;
       } else {
         throw new ForbiddenException('Access Forbidden');
       }
-    } catch {
-      throw new NotFoundException('Resource not found');
     }
   }
 }
-
-/* @UseGuards(AuthGuard)
-  @Get()
-  findAll() {
-    return this.projectService.findAll();
-  }
-  @UseGuards(AuthGuard)
-  @Get(':id')
-  getUserById(@Param('id') projectId: string) {
-    const project = this.projectService.returnUser(projectId);
-    return project;
-  }*/

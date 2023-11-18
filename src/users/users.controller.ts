@@ -59,27 +59,3 @@ export class UsersController {
     return user;
   }
 }
-
-// @Get()
-// findAll() {
-//  return this.usersService.findAll();
-// }
-/*
-  @Get('/auth/login')
-  findOne(username: string, password: string, email: string) {
-    return this.usersService.signIn(username, password, email);
-  }
-  @Get('/me')
-  findOne(){
-    return 
-  }*/
-/*
-  @Patch(':id')
-  update(@Param('id') id: string, @Body() updateUserDto: UpdateUserDto) {
-    return this.usersService.update(id, updateUserDto);
-  }*/
-
-//@Delete(':id')
-//remove(@Param('id') id: string) {
-//return this.usersService.delete(id);
-//}

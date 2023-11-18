@@ -1,15 +1,14 @@
-import { ConflictException, Injectable } from '@nestjs/common';
 import {
-  Between,
-  FindOneOptions,
-  LessThanOrEqual,
-  MoreThanOrEqual,
-  Repository,
-} from 'typeorm';
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
+import { Between, FindManyOptions, FindOneOptions, Repository } from 'typeorm';
 import { CreateProjectUserDto } from './dto/create-project-user.dto';
 import { InjectRepository } from '@nestjs/typeorm';
 import { ProjectUser } from './entities/project-user.entity';
 import { JwtService } from '@nestjs/jwt';
+import Project from '../projects/entities/project.entity';
 
 @Injectable()
 export class ProjectsUsersService {
@@ -28,43 +27,80 @@ export class ProjectsUsersService {
         this.projectsUsersRepository.create(createProjectUserDto);
 
       // Enregistrer le nouveau ProjectUser dans la base de données
+
       const savedProjectUser =
         await this.projectsUsersRepository.save(newProjectUser);
-
-      return savedProjectUser;
+      if (savedProjectUser == null) {
+        throw new ConflictException("Le user ou le projet n'a pas été trouvé");
+      }
+      const options: FindManyOptions<ProjectUser> = {
+        where: { id: savedProjectUser.id },
+        relations: ['user', 'project', 'project.referringEmployee'],
+      };
+      const completeProjectUser =
+        await this.projectsUsersRepository.findOne(options);
+      delete completeProjectUser.project.referringEmployee.password;
+      delete completeProjectUser.user.password;
+      return completeProjectUser;
     } catch (error) {
       // Gérer les erreurs éventuelles lors de la création du ProjectUser
-      throw new ConflictException('Erreur lors de la création du ProjectUser');
+      throw new NotFoundException("Le user ou le projet n'a pas été trouvé");
     }
   }
   async findByEmployee(createProjectUserDto: CreateProjectUserDto) {
-    return await this.projectsUsersRepository.findOne({
+    const options: FindManyOptions<ProjectUser> = {
       where: {
         userId: createProjectUserDto.userId,
-        startDate: LessThanOrEqual(createProjectUserDto.endDate),
-        endDate: MoreThanOrEqual(createProjectUserDto.startDate),
-        projectId: createProjectUserDto.projectId,
       },
-    });
+    };
+    const finds = await this.projectsUsersRepository.find(options);
+    for (const find of finds) {
+      if (
+        (find.startDate <= createProjectUserDto.startDate &&
+          find.endDate >= createProjectUserDto.startDate) ||
+        (createProjectUserDto.startDate <= find.startDate &&
+          createProjectUserDto.endDate >= find.startDate)
+      ) {
+        return find;
+      }
+    }
+    return null;
   }
-  async findAll(): Promise<ProjectUser[]> {
-    const projectUser = await this.projectsUsersRepository.find();
-    return projectUser;
+  async findAll(): Promise<Project[]> {
+    const options: FindManyOptions<ProjectUser> = {
+      relations: ['user', 'project'],
+    };
+    const projectUser = await this.projectsUsersRepository.find(options);
+    const projects = projectUser.map((projectUser) => projectUser.project);
+    return projects;
+  }
+  async findOneProject(id: string): Promise<Project[]> {
+    const options: FindManyOptions<ProjectUser> = {
+      where: { id: id },
+      relations: ['user', 'project'],
+    };
+    const projectUser = await this.projectsUsersRepository.find(options);
+    const projects = projectUser.map((projectUser) => projectUser.project);
+    return projects;
   }
   async findOne(id: string): Promise<ProjectUser> {
-    const projectUser = await this.projectsUsersRepository.findOne({
+    const options: FindManyOptions<ProjectUser> = {
       where: { id: id },
-    });
-    return projectUser;
+    };
+    const usersProject = await this.projectsUsersRepository.findOne(options);
+    return usersProject;
   }
+  // fonction testée
+
   async isUserInvolvedInProject(
     idUser: string,
     idProject: string,
   ): Promise<boolean> {
-    const project = await this.projectsUsersRepository.findOne({
+    const options: FindManyOptions<ProjectUser> = {
       where: { userId: idUser, projectId: idProject },
-    });
-    if (project === undefined) {
+    };
+    const projects = await this.projectsUsersRepository.findOne(options);
+    if (projects == null) {
       return false;
     }
     return true;
@@ -86,52 +122,48 @@ export class ProjectsUsersService {
     return existingProjectUser || null;
   }
 
-  async getProjectUserDetails(projectUserId: string): Promise<ProjectUser> {
+  async getProjectUserDetails(
+    userId: string,
+    projectId: string,
+  ): Promise<ProjectUser> {
     // Récupérer les détails du ProjectUser avec les relations incluses
     const options: FindOneOptions<ProjectUser> = {
-      where: { id: projectUserId },
-      relations: ['user', 'project'],
+      where: { userId: userId, projectId: projectId },
+      relations: ['user', 'project', 'project.referringEmployeeId'],
     };
 
-    const info = await this.projectsUsersRepository.findOneOrFail(options);
-    delete info.user.password;
+    const info = await this.projectsUsersRepository.findOne(options);
+    if (info !== null) {
+      delete info.user.password;
+    }
     return info;
   }
+  // fonction testée
+  async getProjectsForUser(userId: string) {
+    const options: FindOneOptions<CreateProjectUserDto> = {
+      where: { userId: userId },
+      relations: ['user', 'project'],
+    };
+    const projectUser = await this.projectsUsersRepository.find(options);
+    const response = projectUser.map((projectUser) => ({
+      id: projectUser.project.id,
+      name: projectUser.project.name,
+      referringEmployeeId: projectUser.project.referringEmployeeId,
+      referringEmployee: {
+        id: projectUser.user.id,
+        username: projectUser.user.username,
+        email: projectUser.user.email,
+        role: projectUser.user.role,
+      },
+    }));
+    return response;
+  }
+  async findUser(idUser: string, idProject): Promise<ProjectUser> {
+    const options: FindManyOptions<ProjectUser> = {
+      where: { userId: idUser, projectId: idProject },
+      relations: ['user'],
+    };
+    const usersProject = await this.projectsUsersRepository.findOne(options);
+    return usersProject;
+  }
 }
-
-/*async signIn(LoginUserDto: loginUserDto) {
-    const options: FindOneOptions<User> = {
-      where: { email: LoginUserDto.email },
-    };
-    const user = await this.usersRepository.findOne(options);
-    const match = await bcrypt.compare(LoginUserDto.password, user.password);
-    if (!match) {
-      throw new UnauthorizedException();
-    }
-    const payload = { sub: user.id, email: user.email };
-    return {
-      access_token: await this.jwtService.signAsync(payload),
-    };
-  }
-
-  async findAll(): Promise<User[]> {
-    const users = await this.usersRepository.find();
-    for (const user of users) {
-      delete user.password;
-    }
-    return users;
-  }
-
-  async returnUser(id: string) {
-    if (!isUUID(id)) {
-      throw new BadRequestException('Invalid UUID format for user ID');
-    }
-    const user = await this.usersRepository.findOne({
-      where: { id: id },
-    });
-    if (user === null) {
-      throw new NotFoundException(`User with ID ${id} not found`);
-    }
-    delete user.password;
-    return user;
-  }*/

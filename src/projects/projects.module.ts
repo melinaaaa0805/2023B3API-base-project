@@ -18,6 +18,6 @@ import { ProjectsUsersService } from '../project-user/project-user.service';
   ],
   controllers: [ProjectsController, UsersController, ProjectUsersController],
   providers: [ProjectsService, UsersService, ProjectsUsersService], // Add UserRepository to providers
-  exports: [ProjectsService, UsersService],
+  exports: [ProjectsService, UsersService, ProjectsUsersService],
 })
 export class ProjectsModule {}

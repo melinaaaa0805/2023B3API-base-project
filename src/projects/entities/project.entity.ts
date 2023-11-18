@@ -4,7 +4,7 @@ import {
   Column,
   ManyToOne,
   JoinColumn,
-  OneToMany,
+  ManyToMany,
 } from 'typeorm';
 import { ProjectUser } from '../../project-user/entities/project-user.entity';
 import User from '../../users/entities/user.entity';
@@ -26,7 +26,7 @@ export class Project {
   @JoinColumn({ name: 'referringEmployeeId' })
   referringEmployee: User;
 
-  @OneToMany(() => ProjectUser, (projectUser) => projectUser.projectId)
+  @ManyToMany(() => ProjectUser, (projectUser) => projectUser.projectId)
   projectUsers: ProjectUser[];
 }
 
