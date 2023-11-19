@@ -8,7 +8,6 @@ import {
   UseGuards,
   Get,
   Param,
-  NotFoundException,
   UnauthorizedException,
   ForbiddenException,
 } from '@nestjs/common';
@@ -59,11 +58,11 @@ export class EventsController {
       }
 
       if (req.user.role === 'ProjectManager') {
-        const projectsDayUser = this.projectUserService.managerDate(
+        const isAuthorized = await this.projectUserService.managerDate(
           req.user.sub,
           event.date,
         );
-        if (projectsDayUser === null) {
+        if (isAuthorized == null) {
           throw new UnauthorizedException();
         }
         const update = await this.eventService.updateEvent(eventId);
@@ -81,16 +80,36 @@ export class EventsController {
   @Post('/:id/decline')
   async declineEvent(@Param('id') eventId: string, @Req() req) {
     try {
-      if (req.user.role == 'Employee') {
+      if (req.user.role === 'Employee') {
         throw new UnauthorizedException();
       }
-      await this.eventService.declineEvent(eventId);
-      return { message: 'Event declined successfully' };
-    } catch (error) {
-      if (error instanceof NotFoundException) {
-        throw new NotFoundException('Event not found');
+      const event = await this.eventService.getEvent(eventId);
+      if (
+        event.eventStatus === 'Accepted' ||
+        event.eventStatus === 'Declined'
+      ) {
+        throw new ForbiddenException(
+          'Cannot alter status of a validated or declined event',
+        );
       }
-      throw error;
+
+      if (req.user.role === 'ProjectManager') {
+        const isAuthorized = await this.projectUserService.managerDate(
+          req.user.sub,
+          event.date,
+        );
+        if (isAuthorized == null) {
+          throw new UnauthorizedException();
+        }
+        const update = await this.eventService.declineEvent(eventId);
+        return update;
+      }
+      if (req.user.role == 'Admin') {
+        const update = await this.eventService.declineEvent(eventId);
+        return update;
+      }
+    } catch (error) {
+      throw new UnauthorizedException('Event not found');
     }
   }
 }

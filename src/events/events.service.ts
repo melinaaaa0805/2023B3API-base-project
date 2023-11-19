@@ -1,11 +1,9 @@
 import {
-  BadRequestException,
-  ForbiddenException,
   Injectable,
   NotFoundException,
   UnauthorizedException,
 } from '@nestjs/common';
-import { Between, FindManyOptions, FindOperator, Repository } from 'typeorm';
+import { Between, FindManyOptions, Repository } from 'typeorm';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Event } from './entities/events.entity';
 import { CreateEventDto } from './dto/create-event.dto';
@@ -45,23 +43,28 @@ export class EventsService {
       const selectedDate = dayjs(createEventDto.date);
 
       // Obtenir le lundi de la semaine correspondante
-      const monday = selectedDate.startOf('week');
-      console.log('la date est ' + JSON.stringify(monday));
+      const dayjsMonday = selectedDate.startOf('week').subtract(1, 'day');
+      const monday = dayjsMonday.toDate();
+
       // Obtenir le vendredi de la semaine en ajoutant 4 jours à partir du lundi
-      const friday = monday.add(4, 'day');
-      console.log('la datews est ' + friday.toDate());
+      const dayjsfriday = dayjsMonday.add(6, 'day');
+      const friday = dayjsfriday.toDate();
+
       const options: FindManyOptions<Event> = {
         where: {
           userId: userId,
           eventType: 'RemoteWork',
-          date: Between(monday.toDate(), friday.toDate()) as FindOperator<Date>,
+          date: Between(monday, friday),
         },
       };
-      const remoteWorkCountThisWeek = await this.eventRepository.count(options);
-      console.log('le nb de jour est ' + remoteWorkCountThisWeek);
+      const remotesWorkCountThisWeek =
+        await this.eventRepository.count(options);
+      console.log(
+        'le nb de jour est ' + JSON.stringify(remotesWorkCountThisWeek),
+      );
 
-      if (remoteWorkCountThisWeek >= 2) {
-        throw new BadRequestException(
+      if (remotesWorkCountThisWeek >= 2) {
+        throw new UnauthorizedException(
           'You cannot have more than two remote work events per week',
         );
       }
@@ -116,26 +119,9 @@ export class EventsService {
   }
 
   async declineEvent(eventId: string) {
-    const options: FindManyOptions<Event> = {
-      where: {
-        id: eventId,
-      },
-    };
-    const event = await this.eventRepository.findOne(options);
-
-    if (!event) {
-      throw new NotFoundException('Event not found');
-    }
-
-    if (event.eventStatus === 'Accepted' || event.eventStatus === 'Declined') {
-      throw new ForbiddenException(
-        'Cannot alter status of a validated or declined event',
-      );
-    }
-
-    // Logic to decline the event
-    // ...
-
-    await this.eventRepository.update(eventId, { eventStatus: 'Declined' });
+    const update = await this.eventRepository.update(eventId, {
+      eventStatus: 'Declined',
+    });
+    return update;
   }
 }
