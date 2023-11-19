@@ -83,15 +83,3 @@ export class ProjectUsersController {
     }
   }
 }
-
-/* @UseGuards(AuthGuard)
-    @Get()
-    findAll() {
-      return this.projectService.findAll();
-    }
-    @UseGuards(AuthGuard)
-    @Get(':id')
-    getUserById(@Param('id') projectId: string) {
-      const project = this.projectService.returnUser(projectId);
-      return project;
-    }*/

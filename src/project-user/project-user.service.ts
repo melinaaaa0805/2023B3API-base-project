@@ -3,7 +3,13 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { Between, FindManyOptions, FindOneOptions, Repository } from 'typeorm';
+import {
+  FindManyOptions,
+  FindOneOptions,
+  LessThanOrEqual,
+  MoreThanOrEqual,
+  Repository,
+} from 'typeorm';
 import { CreateProjectUserDto } from './dto/create-project-user.dto';
 import { InjectRepository } from '@nestjs/typeorm';
 import { ProjectUser } from './entities/project-user.entity';
@@ -105,39 +111,6 @@ export class ProjectsUsersService {
     }
     return true;
   }
-  async checkIfUserIsAssigned(
-    userId: string,
-    startDate: Date,
-    endDate: Date,
-  ): Promise<ProjectUser | null> {
-    // Vérifie si l'utilisateur est déjà affecté à un projet pour la période demandée
-    const existingProjectUser = await this.projectsUsersRepository.findOne({
-      where: {
-        userId,
-        startDate: Between(startDate, endDate),
-        endDate: Between(startDate, endDate),
-      },
-    });
-
-    return existingProjectUser || null;
-  }
-
-  async getProjectUserDetails(
-    userId: string,
-    projectId: string,
-  ): Promise<ProjectUser> {
-    // Récupérer les détails du ProjectUser avec les relations incluses
-    const options: FindOneOptions<ProjectUser> = {
-      where: { userId: userId, projectId: projectId },
-      relations: ['user', 'project', 'project.referringEmployeeId'],
-    };
-
-    const info = await this.projectsUsersRepository.findOne(options);
-    if (info !== null) {
-      delete info.user.password;
-    }
-    return info;
-  }
   // fonction testée
   async getProjectsForUser(userId: string) {
     const options: FindOneOptions<CreateProjectUserDto> = {
@@ -158,12 +131,18 @@ export class ProjectsUsersService {
     }));
     return response;
   }
-  async findUser(idUser: string, idProject): Promise<ProjectUser> {
-    const options: FindManyOptions<ProjectUser> = {
-      where: { userId: idUser, projectId: idProject },
-      relations: ['user'],
+
+  async managerDate(userId: string, date: Date) {
+    const options2: FindManyOptions<ProjectUser> = {
+      where: {
+        project: {
+          referringEmployeeId: userId,
+        },
+        startDate: LessThanOrEqual(new Date(date)),
+        endDate: MoreThanOrEqual(new Date(date)),
+      },
+      relations: ['project'],
     };
-    const usersProject = await this.projectsUsersRepository.findOne(options);
-    return usersProject;
+    return await this.projectsUsersRepository.findOne(options2);
   }
 }
