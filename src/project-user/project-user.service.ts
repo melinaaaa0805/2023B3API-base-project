@@ -115,7 +115,7 @@ export class ProjectsUsersService {
   async getProjectsForUser(userId: string) {
     const options: FindOneOptions<CreateProjectUserDto> = {
       where: { userId: userId },
-      relations: ['user', 'project'],
+      relations: ['user', 'project', 'project.referringEmployee'],
     };
     const projectUser = await this.projectsUsersRepository.find(options);
     const response = projectUser.map((projectUser) => ({
@@ -131,7 +131,7 @@ export class ProjectsUsersService {
     }));
     return response;
   }
-
+  // Vérifie si le manager est assigne a un projet pour une date
   async managerDate(userId: string, date: Date) {
     const options2: FindManyOptions<ProjectUser> = {
       where: {
