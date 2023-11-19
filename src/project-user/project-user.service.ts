@@ -133,7 +133,6 @@ export class ProjectsUsersService {
   }
 
   async managerDate(userId: string, date: Date) {
-    console.log("l'id user est" + userId + 'la date est ' + date);
     const options2: FindManyOptions<ProjectUser> = {
       where: {
         startDate: LessThanOrEqual(date),
@@ -145,7 +144,6 @@ export class ProjectsUsersService {
       relations: ['project'],
     };
     const isOk = await this.projectsUsersRepository.findOne(options2);
-    console.log('Résultat de la requête findOne :', isOk);
     return isOk;
   }
 }

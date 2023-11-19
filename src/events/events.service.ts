@@ -59,10 +59,6 @@ export class EventsService {
       };
       const remotesWorkCountThisWeek =
         await this.eventRepository.count(options);
-      console.log(
-        'le nb de jour est ' + JSON.stringify(remotesWorkCountThisWeek),
-      );
-
       if (remotesWorkCountThisWeek >= 2) {
         throw new UnauthorizedException(
           'You cannot have more than two remote work events per week',
@@ -123,5 +119,30 @@ export class EventsService {
       eventStatus: 'Declined',
     });
     return update;
+  }
+  async getAbsenceEmployee(userId: string, month: number) {
+    const dayjsfirstDayOfMonth = dayjs()
+      .month(month - 1)
+      .startOf('month');
+    const dayJslastDayOfMonth = dayjs()
+      .month(month - 1)
+      .endOf('month');
+
+    const lastDayOfMonth = dayJslastDayOfMonth.toDate();
+    console.log('la date est ' + JSON.stringify(lastDayOfMonth));
+    const firstDayOfMonth = dayjsfirstDayOfMonth.toDate();
+    const options: FindManyOptions<Event> = {
+      where: {
+        userId: userId,
+        date: Between(firstDayOfMonth, lastDayOfMonth),
+        eventStatus: 'Accepted',
+      },
+    };
+    try {
+      const event = await this.eventRepository.count(options);
+      return event;
+    } catch {
+      return 0;
+    }
   }
 }
