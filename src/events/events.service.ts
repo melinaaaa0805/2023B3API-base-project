@@ -87,6 +87,7 @@ export class EventsService {
 
     return savedEvent;
   }
+  //retourne un évènement
   async getEvent(id: string) {
     const options: FindManyOptions<Event> = {
       where: { id: id },
@@ -97,6 +98,7 @@ export class EventsService {
     }
     return event;
   }
+  //retourne tous les evenements
   async getAll() {
     const event = await this.eventRepository.find();
     if (event == null) {
@@ -113,13 +115,14 @@ export class EventsService {
     });
     return update;
   }
-
+  // decline un evenement
   async declineEvent(eventId: string) {
     const update = await this.eventRepository.update(eventId, {
       eventStatus: 'Declined',
     });
     return update;
   }
+  //retourne les absences d'un employé pour un mois
   async getAbsenceEmployee(userId: string, month: number) {
     const dayjsfirstDayOfMonth = dayjs()
       .month(month - 1)

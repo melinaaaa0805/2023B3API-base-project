@@ -25,12 +25,12 @@ export class ProjectsController {
     private readonly userService: UsersService,
     private readonly projectUserService: ProjectsUsersService,
   ) {}
-  // fonction testée
 
   @Post()
   @UseGuards(AuthGuard)
   @UsePipes(new ValidationPipe())
   async create(@Body() createProjectDto: CreateProjectDto, @Req() req) {
+    // n'autorisr que les admins pour la création
     if (req.user.role !== 'Admin') {
       throw new UnauthorizedException();
     }
@@ -68,9 +68,11 @@ export class ProjectsController {
   @Get()
   async getProjects(@Req() req) {
     try {
+      //retourne tous les projets si le user est admin ou projectmanager
       if (req.user.role === 'Admin' || req.user.role === 'ProjectManager') {
         return await this.projectService.findAll();
       } else if (req.user.role === 'Employee') {
+        //retourne seulement les projets du user
         const employeeProjects =
           await this.projectUserService.getProjectsForUser(req.user.sub);
         return employeeProjects;
@@ -84,14 +86,16 @@ export class ProjectsController {
   @UseGuards(AuthGuard)
   @Get(':id')
   async getOneProject(@Param('id') projectId: string, @Req() req) {
+    //si pas de projet retourne une erreur
     const oneProject = await this.projectService.findById(projectId);
     if (oneProject == undefined) {
       throw new NotFoundException('Resource not found');
     }
-
+    // pour les admin et projectmanager pas de controle
     if (req.user.role === 'Admin' || req.user.role === 'ProjectManager') {
       return oneProject;
     }
+    //si employee on vérifie qu'il est dans le projet
     if (req.user.role === 'Employee') {
       const result = await this.projectUserService.isUserInvolvedInProject(
         req.user.sub,

@@ -53,6 +53,7 @@ export class ProjectsUsersService {
       throw new NotFoundException("Le user ou le projet n'a pas été trouvé");
     }
   }
+  //recuperer tous les projets d'un user
   async findByEmployee(createProjectUserDto: CreateProjectUserDto) {
     const options: FindManyOptions<ProjectUser> = {
       where: {
@@ -89,6 +90,7 @@ export class ProjectsUsersService {
     const projects = projectUser.map((projectUser) => projectUser.project);
     return projects;
   }
+  //recupère un projetuser
   async findOne(id: string): Promise<ProjectUser> {
     const options: FindManyOptions<ProjectUser> = {
       where: { id: id },
@@ -96,7 +98,7 @@ export class ProjectsUsersService {
     const usersProject = await this.projectsUsersRepository.findOne(options);
     return usersProject;
   }
-  // fonction testée
+  // vrifie si un employé est assigné à un projet donné
 
   async isUserInvolvedInProject(
     idUser: string,
@@ -111,7 +113,7 @@ export class ProjectsUsersService {
     }
     return true;
   }
-  // fonction testée
+  // recupère un projet en fonction d'un utilisateur
   async getProjectsForUser(userId: string) {
     const options: FindOneOptions<CreateProjectUserDto> = {
       where: { userId: userId },

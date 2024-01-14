@@ -30,7 +30,7 @@ import { EventsService } from './events.service';
     UsersService,
     ProjectsService,
     EventsService,
-  ], // Add UserRepository to providers
+  ],
   exports: [ProjectsUsersService, ProjectsService, EventsService],
 })
 export class EventsModule {}

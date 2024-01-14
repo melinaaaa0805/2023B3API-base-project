@@ -53,6 +53,7 @@ export class ProjectUsersController {
   @Get()
   @UseGuards(AuthGuard)
   findAll(@Req() req) {
+    //Si le user est admin ou project manager alors retourner tous les projectuser
     if (req.user.role == 'Admin' || req.user.role == 'ProjectManager') {
       const projectsUser = this.projectUserService.findAll();
       if (projectsUser == null) {
@@ -60,6 +61,7 @@ export class ProjectUsersController {
       }
       return projectsUser;
     } else {
+      // Sinon retourner que les projets du user
       const projetUser = this.projectUserService.findOneProject(req.user.sub);
       if (projetUser == null) {
         throw new UnauthorizedException();
@@ -67,6 +69,7 @@ export class ProjectUsersController {
       return projetUser;
     }
   }
+
   @Get(':id')
   @UseGuards(AuthGuard)
   async findprojectUser(@Param('id') projectUserId: string, @Req() req) {
@@ -77,6 +80,7 @@ export class ProjectUsersController {
     if (req.user.role == 'Admin' || req.user.role == 'ProjectManager') {
       return projectUsers;
     } else {
+      //ne retourner le projet que si le user fait partie du projet
       if (projectUsers.userId === req.user.sub) {
         return projectUsers;
       }

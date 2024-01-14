@@ -14,13 +14,11 @@ export class ProjectsService {
     private readonly jwtService: JwtService,
   ) {}
 
-  // fonction testée
   async create(createProjectDto: CreateProjectDto) {
     const newProject = this.projectsRepository.create(createProjectDto);
     const insertedProject = await this.projectsRepository.save(newProject);
     return { insertedProject };
   }
-  // fonction testée
 
   async getProject(name: string) {
     const project: UpdateProjectDto = await this.projectsRepository.findOne({
@@ -28,7 +26,6 @@ export class ProjectsService {
     });
     return { project };
   }
-  // fonction testée
   async findAll() {
     const options: FindManyOptions<Project> = {
       relations: ['referringEmployee'],

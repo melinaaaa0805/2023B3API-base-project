@@ -52,12 +52,6 @@ export class UsersController {
   @Get('me')
   returnUser(@Req() req) {
     const user = this.usersService.returnUser(req.user.sub);
-    if (!user) {
-      // Gérer le cas où aucun utilisateur n'est trouvé avec l'ID spécifié
-      return 'Utilisateur non trouvé';
-    }
-
-    // Faire quelque chose avec l'utilisateur trouvé
     return user;
   }
   @UseGuards(AuthGuard)

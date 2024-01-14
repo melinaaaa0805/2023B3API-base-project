@@ -1,4 +1,4 @@
-// request-logger.middleware.ts
+//create logs for each request
 
 import { Injectable, NestMiddleware } from '@nestjs/common';
 import { Request, Response, NextFunction } from 'express';
